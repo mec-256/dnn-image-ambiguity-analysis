@@ -1,0 +1,6 @@
+# Ignore data files and folders
+*.npy
+data/
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
