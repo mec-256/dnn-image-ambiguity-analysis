@@ -2,3 +2,5 @@ numpy
 torch
 torchvision
 matplotlib
+seaborn
+scipy
