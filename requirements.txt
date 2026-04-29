@@ -4,3 +4,4 @@ torchvision
 matplotlib
 seaborn
 scipy
+nvidia-ml-py
