@@ -257,5 +257,3 @@ for epoch in range(1, NUM_EPOCHS + 1):
 print(f"{'─'*65}")
 print(f"\n[Done] Best validation loss : {best_val_loss:.4f}")
 print(f"[Done] Weights saved        : {os.path.abspath(SAVE_PATH)}")
-print("\nNext step (Day 4 — Eswar): load these weights as the backbone "
-      "initialisation before attaching the soft-label prediction head.")
