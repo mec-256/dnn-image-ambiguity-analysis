@@ -26,7 +26,7 @@ class TestLossFunctions:
     
     def log_test(self, test_name, passed, message=""):
         """Log test result"""
-        status = "✅ PASS" if passed else "❌ FAIL"
+        status = " PASS" if passed else " FAIL"
         print(f"{status}: {test_name}")
         if message:
             print(f"      {message}")
@@ -415,13 +415,13 @@ class TestLossFunctions:
         print(f"TEST SUMMARY")
         print("=" * 70)
         total = self.passed + self.failed
-        print(f"✅ Passed: {self.passed}/{total}")
-        print(f"❌ Failed: {self.failed}/{total}")
+        print(f" Passed: {self.passed}/{total}")
+        print(f" Failed: {self.failed}/{total}")
         
         if self.failed == 0:
-            print("\n🎉 ALL TESTS PASSED! Loss functions are ready for production.")
+            print("\n ALL TESTS PASSED! Loss functions are ready for production.")
         else:
-            print(f"\n⚠️  {self.failed} test(s) failed. Review implementation.")
+            print(f"\n {self.failed} test(s) failed. Review implementation.")
         
         return self.failed == 0
 
