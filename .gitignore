@@ -4,3 +4,7 @@ data/
 
 # Ignore Jupyter Notebook checkpoints
 .ipynb_checkpoints/
+
+# Ignore PyTorch model weights
+*.pth
+*.pt
