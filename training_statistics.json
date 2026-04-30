@@ -1,0 +1,26 @@
+{
+  "KL Divergence": {
+    "n_epochs": 11,
+    "final_train_loss": 0.08623925538857778,
+    "final_val_loss": 3.360731586456299,
+    "min_train_loss": 0.08623925538857778,
+    "min_val_loss": 2.189651056289673,
+    "best_epoch_val": 1
+  },
+  "Jensen-Shannon Divergence": {
+    "n_epochs": 12,
+    "final_train_loss": 0.020592165932059286,
+    "final_val_loss": 0.5478620595932007,
+    "min_train_loss": 0.020592165932059286,
+    "min_val_loss": 0.5018419981002807,
+    "best_epoch_val": 2
+  },
+  "Custom Composite (KL + Entropy)": {
+    "n_epochs": 11,
+    "final_train_loss": 0.21461249653498332,
+    "final_val_loss": 4.589987396240234,
+    "min_train_loss": 0.21461249653498332,
+    "min_val_loss": 3.7400643920898435,
+    "best_epoch_val": 1
+  }
+}
