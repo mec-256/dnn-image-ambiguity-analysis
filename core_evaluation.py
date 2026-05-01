@@ -29,7 +29,16 @@ Usage:
   Works with whatever model checkpoints exist in the project directory.
   Falls back to pretrained_backbone.pth if fine-tuned models are missing.
 """
+# At the top of core_evaluation.py, add:
+from metrics import (
+    cosine_similarity,
+    pearson_correlation,
+    spearman_correlation,
+)
 
+
+
+# pearsonr and spearmanr are already correctly imported from scipy
 import os
 import json
 import pickle
@@ -462,7 +471,7 @@ def main():
 
         # Distribution matching
         kl   = kl_divergence_mean(true_dists, pred_probs)
-        cos  = cosine_similarity_mean(true_dists, pred_probs)
+        cos  = cosine_similarity(true_dists, pred_probs, reduction='mean')
 
         # Precision@K curve
         prec_curve  = {k: precision_at_k(true_entropy, pred_entropy, k)  for k in K_VALUES}
