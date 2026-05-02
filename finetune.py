@@ -55,7 +55,7 @@ LEARNING_RATE   = 1e-5      # CHANGED: was 1e-4 (too high for fine-tuning)
 WEIGHT_DECAY    = 1e-5
 PATIENCE        = 50        # CHANGED: was 10 (too aggressive early stopping)
 BACKBONE_PATH   = "pretrained_backbone.pth"
-NUM_WORKERS     = 0            # Set to 0 for macOS to avoid multiprocessing issues
+NUM_WORKERS     = 0         # Set to 0 for macOS to avoid multiprocessing issues
 
 CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
 CIFAR10_STD  = (0.2023, 0.1994, 0.2010)
@@ -75,49 +75,38 @@ print(f"[Device] Using: {device}")
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# 3. DATA PIPELINE
+# 3. DATA PIPELINE (FIXED FOR CIFAR-10H ALIGNMENT)
 # ══════════════════════════════════════════════════════════════════════════
 print(f"[Data] Loading CIFAR-10H dataset...")
 
-# Load CIFAR-10 images from pickle files
-def unpickle(file):
-    """Load CIFAR-10 pickle files"""
-    import pickle
-    with open(file, 'rb') as fo:
-        dict = pickle.load(fo, encoding='bytes')
-    return dict
+from datasets import load_dataset
+from tqdm import tqdm
 
-# Load all CIFAR-10 training batches
-train_images = []
-train_labels_hard = []
-for i in range(1, 6):
-    batch = unpickle(f'./data/cifar-10-batches-py/data_batch_{i}')
-    train_images.append(batch[b'data'])
-    train_labels_hard.append(batch[b'labels'])
+print("[Data] Downloading CIFAR-10 TEST split from HuggingFace ...")
+ds_test = load_dataset("cifar10", split="test")
 
-train_images = np.concatenate(train_images).reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)  # (50000, 32, 32, 3)
-train_labels_hard = np.concatenate(train_labels_hard)
-
-# Load test batch
-test_batch = unpickle('./data/cifar-10-batches-py/test_batch')
-test_images = test_batch[b'data'].reshape(-1, 3, 32, 32).transpose(0, 2, 3, 1)  # (10000, 32, 32, 3)
-test_labels_hard = np.array(test_batch[b'labels'])
-
-print(f"  CIFAR-10 images loaded: {train_images.shape} (train), {test_images.shape} (test)")
+print("[Data] Converting images to numpy ...")
+test_images = np.array([np.array(item["img"]) for item in tqdm(ds_test, desc="  images", unit="img")])
 
 # Load CIFAR-10H soft labels (10,000 labels for test set)
 cifar10h_probs = np.load('./cifar10h-probs.npy')  # Shape: (10000, 10)
 print(f"  CIFAR-10H soft labels loaded: {cifar10h_probs.shape}")
 
-# Use only the first 10,000 images from CIFAR-10 training set (matching CIFAR-10H)
-# Split into train (6000), val (2000), test (2000)
-X_train = train_images[:6000]
+# --- SANITY CHECK: Ensure alignment ---
+hf_hard_label = ds_test[0]['label']
+soft_label_argmax = np.argmax(cifar10h_probs[0])
+print(f"[Data] Alignment Check (Image 0) -> HF Label: {hf_hard_label} | Soft Label Max: {soft_label_argmax}")
+if hf_hard_label != soft_label_argmax:
+    print("⚠️ WARNING: Data alignment looks suspicious!")
+
+# Split into train (6000), val (2000), test (2000) using the EXACT SAME TEST IMAGES
+X_train = test_images[:6000]
 y_train = cifar10h_probs[:6000]
 
-X_val = train_images[6000:8000]
+X_val = test_images[6000:8000]
 y_val = cifar10h_probs[6000:8000]
 
-X_test = train_images[8000:10000]
+X_test = test_images[8000:10000]
 y_test = cifar10h_probs[8000:10000]
 
 print(f"  Train: {X_train.shape}, {y_train.shape}")
@@ -137,7 +126,7 @@ val_transform = transforms.Compose([
     transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
 ])
 
-train_dataset = CIFAR10HDataset(X_train, y_train, transform=train_transform)   # changed to train_transform
+train_dataset = CIFAR10HDataset(X_train, y_train, transform=train_transform)   
 val_dataset = CIFAR10HDataset(X_val, y_val, transform=val_transform)
 test_dataset = CIFAR10HDataset(X_test, y_test, transform=val_transform)
 
@@ -174,13 +163,6 @@ print(f"[Data] DataLoaders created successfully")
 def build_model(backbone_path, freeze_backbone=False):
     """
     Load backbone and set up for fine-tuning
-    
-    Args:
-        backbone_path: Path to pretrained backbone weights
-        freeze_backbone: If True, don't update backbone weights during fine-tuning
-    
-    Returns:
-        model: CIFAR10H_ResNet model ready for fine-tuning
     """
     # Load backbone
     model = CIFAR10H_ResNet()
@@ -210,9 +192,6 @@ def build_model(backbone_path, freeze_backbone=False):
 def run_epoch(loader, model, criterion, optimizer=None, training=False):
     """
     Run one epoch on a dataloader
-    
-    Returns:
-        avg_loss: Average loss across batches
     """
     model.train() if training else model.eval()
     total_loss = 0.0
@@ -242,17 +221,6 @@ def run_epoch(loader, model, criterion, optimizer=None, training=False):
 def train_with_loss(model, train_loader, val_loader, criterion, loss_name, save_path):
     """
     Train model with given loss function
-    
-    Args:
-        model: Model to train
-        train_loader: Training dataloader
-        val_loader: Validation dataloader
-        criterion: Loss function
-        loss_name: Name of loss (for logging)
-        save_path: Where to save best checkpoint
-    
-    Returns:
-        history: Dict with training/validation loss per epoch
     """
     # Filter for trainable parameters
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())

@@ -47,7 +47,8 @@ MOMENTUM      = 0.9
 WEIGHT_DECAY  = 5e-4
 PATIENCE      = 10       # early-stopping patience (epochs without improvement)
 SAVE_PATH     = "pretrained_backbone.pth"
-NUM_WORKERS   = 4        # DataLoader workers; set to 0 if debugging on Windows
+NUM_WORKERS   = 0
+# DataLoader workers; set to 0 if debugging on Windows
 
 
 # ══════════════════════════════════════════════════════════════════════════

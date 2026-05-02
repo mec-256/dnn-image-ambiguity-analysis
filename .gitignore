@@ -1,15 +1,17 @@
-# Ignore data files and folders
+# Environments
+.env
+venv/
+env/
+__pycache__/
+
+# Datasets and Large Files
 *.npy
-data/
-
-# Ignore Jupyter Notebook checkpoints
-.ipynb_checkpoints/
-
-# Ignore PyTorch model weights
 *.pth
 *.pt
+data/
+cifar-10-batches-py/
+cifar-10-python.tar.gz
 
-# Allow .pth files specifically in the day8 folder
-!day8/**/*.pth
-
-__pycache__/
+# Logs and Checkpoints
+logs/
+*.pkl

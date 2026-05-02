@@ -56,22 +56,21 @@ CIFAR10_STD  = (0.2023, 0.1994, 0.2010)
 # ===========================================================================
 def load_data():
     """
-    CIFAR-10 images : downloaded from HuggingFace (Toronto site is unreliable).
-    CIFAR-10H labels: loaded from local cifar10h-probs.npy (github.com/jcpeterson/cifar-10h).
-
-    Install once if needed:  pip install datasets
+    CIFAR-10 images : downloaded from HuggingFace.
+    CIFAR-10H labels: loaded from local cifar10h-probs.npy.
     """
     from datasets import load_dataset   # pip install datasets
 
-    print("[Data] Downloading CIFAR-10 images from HuggingFace ...")
-    ds_train = load_dataset("cifar10", split="train")   # 50,000 images
+    # BUG FIX: CIFAR-10H labels correspond strictly to the CIFAR-10 *TEST* set!
+    print("[Data] Downloading CIFAR-10 TEST split from HuggingFace ...")
+    ds_test = load_dataset("cifar10", split="test")   # Exactly 10,000 images
     print("[Data] Download complete.")
 
     # Convert HuggingFace PIL images -> numpy (N, 32, 32, 3) uint8
     print("[Data] Converting images to numpy ...")
-    train_images = np.array([np.array(item["img"]) for item in tqdm(ds_train, desc="  images", unit="img")])
+    test_images = np.array([np.array(item["img"]) for item in tqdm(ds_test, desc="  images", unit="img")])
 
-    # CIFAR-10H soft labels -- auto-download from GitHub if not present
+    # CIFAR-10H soft labels
     probs_path = "./cifar10h-probs.npy"
     if not os.path.exists(probs_path):
         import urllib.request
@@ -81,11 +80,17 @@ def load_data():
         print("[Data] cifar10h-probs.npy ready.")
     soft_labels = np.load(probs_path)   # (10000, 10)
 
-    # Same 6k / 2k / 2k split as finetune.py
-    return (train_images[:6000],      soft_labels[:6000],
-            train_images[6000:8000],  soft_labels[6000:8000],
-            train_images[8000:10000], soft_labels[8000:10000])
+    # --- SANITY CHECK: Ensure alignment ---
+    hf_hard_label = ds_test[0]['label']
+    soft_label_argmax = np.argmax(soft_labels[0])
+    print(f"[Data] Alignment Check (Image 0) -> HF Label: {hf_hard_label} | Soft Label Max: {soft_label_argmax}")
+    if hf_hard_label != soft_label_argmax:
+        print("⚠️ WARNING: Data alignment looks suspicious!")
 
+    # Same 6k / 2k / 2k split (using the test_images array now)
+    return (test_images[:6000],      soft_labels[:6000],
+            test_images[6000:8000],  soft_labels[6000:8000],
+            test_images[8000:10000], soft_labels[8000:10000])
 
 tf = transforms.Compose([transforms.ToTensor(),
                           transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD)])
@@ -221,7 +226,7 @@ def ablation_a():
     m = train_model(m, 'Random Init', save_path='abl_a_random.pth')
     results['Random Init'] = evaluate(m)
 
-    # A2: CIFAR-10 pretrained (Pranav's Day 3 checkpoint)
+    # A2: CIFAR-10 Pretrained
     print("\n[A2] CIFAR-10 Pretrained")
     m = CIFAR10H_ResNet().to(device)
     if os.path.exists('pretrained_backbone.pth'):
@@ -232,16 +237,23 @@ def ablation_a():
     m = train_model(m, 'CIFAR-10 Pretrained', save_path='abl_a_pretrained.pth')
     results['CIFAR-10 Pretrained'] = evaluate(m)
 
-    # A3: ImageNet partial transfer (copy matching layers, skip conv1 and fc)
+    # A3: ImageNet partial transfer
     print("\n[A3] ImageNet Transfer")
     m = CIFAR10H_ResNet().to(device)
     imgnet_sd = models.resnet18(weights='IMAGENET1K_V1').state_dict()
     model_sd  = m.state_dict()
-    transferable = {k: v for k, v in imgnet_sd.items()
-                    if k in model_sd and v.shape == model_sd[k].shape}
+    
+    # BUG FIX: Add 'backbone.' prefix to match our custom model architecture
+    transferable = {}
+    for k, v in imgnet_sd.items():
+        custom_key = f"backbone.{k}"
+        if custom_key in model_sd and v.shape == model_sd[custom_key].shape:
+            transferable[custom_key] = v
+            
     model_sd.update(transferable)
     m.load_state_dict(model_sd)
     print(f"  Transferred {len(transferable)}/{len(model_sd)} layers from ImageNet")
+    
     m = train_model(m, 'ImageNet Transfer', save_path='abl_a_imagenet.pth')
     results['ImageNet Transfer'] = evaluate(m)
 
