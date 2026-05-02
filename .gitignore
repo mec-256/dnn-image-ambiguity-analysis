@@ -8,3 +8,8 @@ data/
 # Ignore PyTorch model weights
 *.pth
 *.pt
+
+# Allow .pth files specifically in the day8 folder
+!day8/**/*.pth
+
+__pycache__/
