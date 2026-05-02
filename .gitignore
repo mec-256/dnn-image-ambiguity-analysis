@@ -8,3 +8,4 @@ data/
 # Ignore PyTorch model weights
 *.pth
 *.pt
+__pycache__/
