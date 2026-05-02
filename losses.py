@@ -12,30 +12,34 @@ import torch.nn.functional as F
 
 class KLDivergenceLoss(nn.Module):
     """
-    KL Divergence Loss: Measures how different predicted distribution q is from true distribution p
-    Formula: KL(p||q) = Σ_y p(y) * log(p(y) / q(y))
+    KL Divergence Loss: KL(pred||target) = Σ_y q(y) * log(q(y) / p(y))
+    where q=pred, p=target
     """
     def __init__(self):
         super(KLDivergenceLoss, self).__init__()
-        self.kld = nn.KLDivLoss(reduction='batchmean', log_target=False)
     
     def forward(self, pred_logits, target_dist):
         """
         Args:
             pred_logits: Raw logits from model (batch_size, 10)
-            target_dist: True soft label distribution (batch_size, 10) - should sum to 1
+            target_dist: True soft label distribution (batch_size, 10)
         Returns:
             KL divergence loss
         """
-        # Convert logits to log probabilities (required by KLDivLoss)
-        log_pred = F.log_softmax(pred_logits, dim=1)
+        # Convert logits to probabilities
+        pred_probs = F.softmax(pred_logits, dim=1)
         
-        # Ensure target sums to 1 (safety check)
+        # Normalize target distribution
         target_dist = target_dist / (target_dist.sum(dim=1, keepdim=True) + 1e-8)
         
-        loss = self.kld(log_pred, target_dist)
-        return loss
-
+        # Compute KL(pred || target) = Σ pred * log(pred/target)
+        # More numerically stable than using log_softmax directly
+        kl_loss = torch.sum(
+            pred_probs * (torch.log(pred_probs + 1e-8) - torch.log(target_dist + 1e-8)),
+            dim=1
+        )
+        
+        return kl_loss.mean()
 
 class JensenShannonDivergenceLoss(nn.Module):
     """
@@ -73,53 +77,28 @@ class JensenShannonDivergenceLoss(nn.Module):
 
 
 class CustomCompositeEntropy(nn.Module):
-    """
-    Custom Composite Loss: KL Divergence + Entropy Regularization
-    
-    Intuition: 
-      - KL term ensures predicted distribution matches true distribution
-      - Entropy regularization penalizes mismatch between true and predicted entropy
-      - High-disagreement images (high H(p)) should produce high-entropy predictions
-      - Low-disagreement images (low H(p)) should produce sharp predictions
-    
-    Formula: Loss = λ₁ * KL(p||q) + λ₂ * |H(p) - H(q)|
-    """
     def __init__(self, lambda1=1.0, lambda2=0.5):
         super(CustomCompositeEntropy, self).__init__()
         self.lambda1 = lambda1
         self.lambda2 = lambda2
-        self.kld = nn.KLDivLoss(reduction='batchmean', log_target=False)
     
     def _entropy(self, probs):
-        """
-        Compute Shannon entropy: H(p) = -Σ p(y) * log₂(p(y))
-        Args:
-            probs: Probability distribution (batch_size, 10)
-        Returns:
-            Entropy values (batch_size,)
-        """
-        # Use log2 for consistency with information theory
         return -torch.sum(probs * torch.log2(probs + 1e-8), dim=1)
     
     def forward(self, pred_logits, target_dist):
-        """
-        Args:
-            pred_logits: Raw logits from model (batch_size, 10)
-            target_dist: True soft label distribution (batch_size, 10)
-        Returns:
-            Composite loss value
-        """
         # Convert to probabilities
         pred_probs = F.softmax(pred_logits, dim=1)
         target_dist = target_dist / (target_dist.sum(dim=1, keepdim=True) + 1e-8)
         
-        # KL term
-        log_pred = F.log_softmax(pred_logits, dim=1)
-        kl_loss = self.kld(log_pred, target_dist)
+        # KL term - use CORRECT approach
+        kl_loss = torch.sum(
+            pred_probs * (torch.log(pred_probs + 1e-8) - torch.log(target_dist + 1e-8)),
+            dim=1
+        ).mean()
         
         # Entropy regularization term
-        true_entropy = self._entropy(target_dist)          # H(p): true entropy
-        pred_entropy = self._entropy(pred_probs)           # H(q): predicted entropy
+        true_entropy = self._entropy(target_dist)
+        pred_entropy = self._entropy(pred_probs)
         entropy_error = torch.abs(true_entropy - pred_entropy).mean()
         
         # Combined loss

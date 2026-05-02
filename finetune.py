@@ -51,9 +51,9 @@ torch.cuda.manual_seed_all(SEED)
 # ══════════════════════════════════════════════════════════════════════════
 NUM_EPOCHS      = 200
 BATCH_SIZE      = 32
-LEARNING_RATE   = 1e-4
+LEARNING_RATE   = 1e-5      # CHANGED: was 1e-4 (too high for fine-tuning)
 WEIGHT_DECAY    = 1e-5
-PATIENCE        = 10           # early stopping patience
+PATIENCE        = 50        # CHANGED: was 10 (too aggressive early stopping)
 BACKBONE_PATH   = "pretrained_backbone.pth"
 NUM_WORKERS     = 0            # Set to 0 for macOS to avoid multiprocessing issues
 
@@ -125,12 +125,19 @@ print(f"  Val:   {X_val.shape}, {y_val.shape}")
 print(f"  Test:  {X_test.shape}, {y_test.shape}")
 
 # Create datasets with transforms
+train_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.RandomHorizontalFlip(p=0.5),     # NEW: augmentation
+    transforms.RandomCrop(32, padding=4),        # NEW: augmentation
+    transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
+])
+
 val_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
 ])
 
-train_dataset = CIFAR10HDataset(X_train, y_train, transform=val_transform)
+train_dataset = CIFAR10HDataset(X_train, y_train, transform=train_transform)   # changed to train_transform
 val_dataset = CIFAR10HDataset(X_val, y_val, transform=val_transform)
 test_dataset = CIFAR10HDataset(X_test, y_test, transform=val_transform)
 
