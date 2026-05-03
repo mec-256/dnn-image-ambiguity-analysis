@@ -1,0 +1,67 @@
+{
+  "model": "Jensen-Shannon",
+  "n_test_samples": 2000,
+  "overall_wrong_peak_rate": 0.8885,
+  "mean_kl_divergence": 2.2274,
+  "max_kl_divergence": 4.7582,
+  "mean_true_entropy": 0.23,
+  "mean_pred_entropy": 3.1822,
+  "failure_counts": {
+    "worst_kl": 200,
+    "overconfident": 200,
+    "underconfident": 200,
+    "wrong_peak": 1777
+  },
+  "per_class_failure": {
+    "airplane": {
+      "n_samples": 196,
+      "n_wrong_peak": 196,
+      "fail_rate": 1.0
+    },
+    "automobile": {
+      "n_samples": 202,
+      "n_wrong_peak": 150,
+      "fail_rate": 0.7426
+    },
+    "bird": {
+      "n_samples": 183,
+      "n_wrong_peak": 183,
+      "fail_rate": 1.0
+    },
+    "cat": {
+      "n_samples": 201,
+      "n_wrong_peak": 196,
+      "fail_rate": 0.9751
+    },
+    "deer": {
+      "n_samples": 182,
+      "n_wrong_peak": 177,
+      "fail_rate": 0.9725
+    },
+    "dog": {
+      "n_samples": 188,
+      "n_wrong_peak": 188,
+      "fail_rate": 1.0
+    },
+    "frog": {
+      "n_samples": 213,
+      "n_wrong_peak": 179,
+      "fail_rate": 0.8404
+    },
+    "horse": {
+      "n_samples": 203,
+      "n_wrong_peak": 202,
+      "fail_rate": 0.9951
+    },
+    "ship": {
+      "n_samples": 222,
+      "n_wrong_peak": 221,
+      "fail_rate": 0.9955
+    },
+    "truck": {
+      "n_samples": 210,
+      "n_wrong_peak": 85,
+      "fail_rate": 0.4048
+    }
+  }
+}
